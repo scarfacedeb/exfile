@@ -102,6 +102,29 @@ defmodule Exfile.RouterTest do
     assert content_type_string == "text/plain"
   end
 
+  test "returns file with extension and skips format conversion when extension isn't included in whitelist" do
+    contents = "hello there"
+    :ok = File.write(Path.expand("./tmp/cache/processtest"), contents)
+    conn = conn(:get, Token.build_path("/cache/processtest/test.txt"))
+    conn = Router.call(conn, @opts)
+
+    assert conn.state == :file
+    assert conn.status == 200
+    assert conn.resp_body == contents
+
+    [content_type_string | _] = Plug.Conn.get_resp_header(conn, "content-type")
+    assert content_type_string == "text/plain"
+  end
+
+  test "returns no processor error when file has whitelisted png extension" do
+    :ok = File.write(Path.expand("./tmp/cache/processtest"), "img")
+    conn = conn(:get, Token.build_path("/cache/processtest/test.png"))
+    conn = Router.call(conn, @opts)
+
+    assert conn.status == 500
+    assert conn.resp_body == "processing using convert failed with reason no_processor"
+  end
+
   test "returns 200 on an OPTIONS request to /:backend" do
     conn = conn(:options, "/some-backend")
     conn = Router.call(conn, @opts)
