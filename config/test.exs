@@ -31,7 +31,8 @@ config :exfile, Exfile,
       max_size: 100
     },
   },
-  allow_uploads_to: ["cache", "limited"]
+  allow_uploads_to: ~w{cache limited},
+  convert_formats: ~w{png jpg}
 
 config :logger, level: :info
 
