@@ -17,7 +17,7 @@ defmodule Exfile.RouterTest do
   end
 
   test "returns 404 (file not found) on request to file that does not exist" do
-    conn = conn(:get, "/" <> Token.build_path("cache/1234/test"))
+    conn = conn(:get, Token.build_path("/cache/1234/test"))
     conn = Router.call(conn, @opts)
 
     assert conn.state == :sent
@@ -28,10 +28,10 @@ defmodule Exfile.RouterTest do
   test "returns 200 on request to file that exists" do
     contents = "hello there"
     :ok = File.write(Path.expand("./tmp/cache/exists"), contents)
-    conn = conn(:get, "/" <> Token.build_path("cache/exists/test"))
+    conn = conn(:get, Token.build_path("/cache/exists/test"))
     conn = Router.call(conn, @opts)
 
-    assert conn.state == :sent
+    assert conn.state == :file
     assert conn.status == 200
     assert conn.resp_body == contents
 
@@ -49,10 +49,10 @@ defmodule Exfile.RouterTest do
   end
 
   test "returns 304 (not modified) on request with valid if-none-match" do
-    path = "cache/test/test"
+    path = "/cache/test/test"
     token = Token.generate_token(path)
     path = Path.join(token, path)
-    conn = conn(:get, "/" <> path, "") |> put_req_header("if-none-match", token)
+    conn = conn(:get, path, "") |> put_req_header("if-none-match", token)
     conn = Router.call(conn, @opts)
 
     assert conn.state == :sent
@@ -63,10 +63,10 @@ defmodule Exfile.RouterTest do
   test "returns correctly processed file" do
     contents = "hello there"
     :ok = File.write(Path.expand("./tmp/cache/processtest"), contents)
-    conn = conn(:get, "/" <> Token.build_path("cache/reverse/processtest/test"))
+    conn = conn(:get, Token.build_path("/cache/reverse/processtest/test"))
     conn = Router.call(conn, @opts)
 
-    assert conn.state == :sent
+    assert conn.state == :file
     assert conn.status == 200
     assert conn.resp_body == String.reverse(contents)
 
@@ -77,10 +77,10 @@ defmodule Exfile.RouterTest do
   test "returns correctly processed file when processor saves to a tempfile" do
     contents = "hello there"
     :ok = File.write(Path.expand("./tmp/cache/processtest-tempfile"), contents)
-    conn = conn(:get, "/" <> Token.build_path("cache/reverse-tempfile/processtest-tempfile/test"))
+    conn = conn(:get, Token.build_path("/cache/reverse-tempfile/processtest-tempfile/test"))
     conn = Router.call(conn, @opts)
 
-    assert conn.state == :sent
+    assert conn.state == :file
     assert conn.status == 200
     assert conn.resp_body == String.reverse(contents)
 
@@ -91,15 +91,38 @@ defmodule Exfile.RouterTest do
   test "returns correctly processed file with arguments" do
     contents = "hello there"
     :ok = File.write(Path.expand("./tmp/cache/process-arg-test"), contents)
-    conn = conn(:get, "/" <> Token.build_path("cache/truncate/5/process-arg-test/test"))
+    conn = conn(:get, Token.build_path("/cache/truncate/5/process-arg-test/test"))
     conn = Router.call(conn, @opts)
 
-    assert conn.state == :sent
+    assert conn.state == :file
     assert conn.status == 200
     assert conn.resp_body == "hello"
 
     [content_type_string | _] = Plug.Conn.get_resp_header(conn, "content-type")
     assert content_type_string == "text/plain"
+  end
+
+  test "returns file with extension and skips format conversion when extension isn't included in whitelist" do
+    contents = "hello there"
+    :ok = File.write(Path.expand("./tmp/cache/processtest"), contents)
+    conn = conn(:get, Token.build_path("/cache/processtest/test.txt"))
+    conn = Router.call(conn, @opts)
+
+    assert conn.state == :file
+    assert conn.status == 200
+    assert conn.resp_body == contents
+
+    [content_type_string | _] = Plug.Conn.get_resp_header(conn, "content-type")
+    assert content_type_string == "text/plain"
+  end
+
+  test "returns no processor error when file has whitelisted png extension" do
+    :ok = File.write(Path.expand("./tmp/cache/processtest"), "img")
+    conn = conn(:get, Token.build_path("/cache/processtest/test.png"))
+    conn = Router.call(conn, @opts)
+
+    assert conn.status == 500
+    assert conn.resp_body == "processing using convert failed with reason no_processor"
   end
 
   test "returns 200 on an OPTIONS request to /:backend" do

@@ -37,7 +37,8 @@ defmodule Exfile.Config do
     allow_downloads_from: :all,
     allow_uploads_to: ["cache"],
     secret: nil,
-    cdn_host: nil
+    cdn_host: nil,
+    convert_formats: ~w{png jpg jpeg gif}
   ]
 
   Enum.each @default_config, fn {key, _default} ->

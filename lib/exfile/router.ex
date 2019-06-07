@@ -12,7 +12,7 @@ defmodule Exfile.Router do
 
   defp authenticate(%{path_info: path_info} = conn) do
     [token | rest] = path_info
-    request_path = rest |> Enum.join("/")
+    request_path = "/" <> Enum.join(rest, "/")
     if Exfile.Token.verify_token(request_path, token) do
       conn
     else
@@ -137,9 +137,15 @@ defmodule Exfile.Router do
   defp apply_format_processing(%{halted: true} = conn), do: conn
   defp apply_format_processing(conn) do
     case extract_format(conn) do
-      {:ok, ext} -> process_file(conn, "convert", [ext])
+      {:ok, ext} -> format_whitelisted(conn, ext)
       :error -> conn
     end
+  end
+
+  defp format_whitelisted(conn, ext) do
+    if Enum.member?(Config.convert_formats, ext),
+      do: process_file(conn, "convert", [ext]),
+      else: conn
   end
 
   defp process_file(conn, processor, args \\ [])
