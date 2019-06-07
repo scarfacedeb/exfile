@@ -153,7 +153,7 @@ defmodule Exfile.RouterTest do
     assert conn.state == :sent
     assert conn.status == 200
 
-    body = Poison.decode!(conn.resp_body)
+    body = Jason.decode!(conn.resp_body)
     assert body["id"] != nil
     assert body["uri"] == "exfile://cache/" <> body["id"]
 
@@ -176,7 +176,7 @@ defmodule Exfile.RouterTest do
     assert conn.state == :sent
     assert conn.status == 422
 
-    body = Poison.decode!(conn.resp_body)
+    body = Jason.decode!(conn.resp_body)
     assert body["error"] == true
     assert body["error_message"] == "too_big"
   end
