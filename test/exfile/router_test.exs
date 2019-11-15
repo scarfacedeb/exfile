@@ -41,11 +41,11 @@ defmodule Exfile.RouterTest do
     [expires_string | _] = Plug.Conn.get_resp_header(conn, "expires")
     {:ok, expires} = Timex.parse(expires_string, "%a, %d %b %Y %H:%M:%S GMT", :strftime)
 
-    valid_date = Timex.Date.now |> Timex.add(Timex.Time.to_timestamp(180, :days))
-    expired_date = Timex.Date.now |> Timex.add(Timex.Time.to_timestamp(540, :days))
+    valid_date = Date.utc_today() |> Timex.add(Timex.Duration.from_days(180))
+    expired_date = Date.utc_today() |> Timex.add(Timex.Duration.from_days(540))
 
-    assert Timex.Date.compare(expires, valid_date) == 1
-    assert Timex.Date.compare(expires, expired_date) == -1
+    assert Timex.compare(expires, valid_date) == 1
+    assert Timex.compare(expires, expired_date) == -1
   end
 
   test "returns 304 (not modified) on request with valid if-none-match" do
@@ -153,7 +153,7 @@ defmodule Exfile.RouterTest do
     assert conn.state == :sent
     assert conn.status == 200
 
-    body = Poison.decode!(conn.resp_body)
+    body = Jason.decode!(conn.resp_body)
     assert body["id"] != nil
     assert body["uri"] == "exfile://cache/" <> body["id"]
 
@@ -176,7 +176,7 @@ defmodule Exfile.RouterTest do
     assert conn.state == :sent
     assert conn.status == 422
 
-    body = Poison.decode!(conn.resp_body)
+    body = Jason.decode!(conn.resp_body)
     assert body["error"] == true
     assert body["error_message"] == "too_big"
   end
