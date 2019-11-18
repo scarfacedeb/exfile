@@ -151,7 +151,7 @@ defmodule Exfile.Router do
   defp process_file(conn, processor, args \\ [])
   defp process_file(%{halted: true} = conn, _, _), do: conn
   defp process_file(%{assigns: %{exfile_local_file: file}} = conn, processor, args) do
-    opts = []
+    opts = [monitor_pid: connection_pid(conn)]
     opts = case extract_format(conn) do
       {:ok, ext} -> Keyword.put(opts, :format, ext)
       :error -> opts
